@@ -33,13 +33,15 @@ Orchestrate a 4-agent security review before committing code across the Open Bio
 
 When this skill is invoked, you (Claude) act as the Coordinator. Follow these steps exactly.
 
+> **Setup:** Set `WORKSPACE_ROOT` to the parent directory containing all Open Biosciences repos (e.g., `export WORKSPACE_ROOT=~/open-biosciences`).
+
 ### Step 1: Identify repos with changes
 
 Run the following to discover which repos have staged or untracked changes:
 
 ```bash
 for repo in biosciences-architecture biosciences-skills biosciences-program biosciences-mcp biosciences-memory biosciences-deepagents biosciences-temporal biosciences-evaluation biosciences-research biosciences-education biosciences-workspace-template; do
-  cd "/home/donbr/open-biosciences/$repo"
+  cd "$WORKSPACE_ROOT/$repo"
   changes=$(git status -s 2>/dev/null)
   if [ -n "$changes" ]; then
     echo "$repo"
@@ -50,7 +52,7 @@ done
 Collect the list of changed files across all repos with changes:
 
 ```bash
-cd "/home/donbr/open-biosciences/$repo" && git status -s | awk '{print $NF}'
+cd "$WORKSPACE_ROOT/$repo" && git status -s | awk '{print $NF}'
 ```
 
 If no repos have changes, report `CLEAN` immediately and stop.
@@ -139,7 +141,7 @@ Apply the verdict logic (see below) and emit the final report.
 > 1. **Check for staged .env files** (HIGH severity). For each repo with changes:
 >
 > ```bash
-> cd "/home/donbr/open-biosciences/{repo}"
+> cd "$WORKSPACE_ROOT/{repo}"
 > # Detect any .env files (not .env.example) in the repo
 > find . -name '.env' -not -name '.env.example' -not -path '*/.git/*' 2>/dev/null
 > # Detect staged .env files specifically
@@ -178,7 +180,7 @@ Apply the verdict logic (see below) and emit the final report.
 > 5. **Report format** (one line per finding):
 > ```
 > file:line | HIGH | Staged .env file detected
-> file:line | MEDIUM | Private home path in source code: /home/donbr/...
+> file:line | MEDIUM | Private home path in source code: /home/<user>/...
 > file:line | LOW | Workspace path reference in documentation (acceptable)
 > ```
 >
@@ -196,7 +198,7 @@ Apply the verdict logic (see below) and emit the final report.
 > 1. **Validate .env.example files** (HIGH severity for real values). For each `.env.example` found in changed repos:
 >
 > ```bash
-> find "/home/donbr/open-biosciences/{repo}" -name '.env.example' -not -path '*/.git/*'
+> find "$WORKSPACE_ROOT/{repo}" -name '.env.example' -not -path '*/.git/*'
 > ```
 >
 > For each file found, check every line with a value assignment:
@@ -206,7 +208,7 @@ Apply the verdict logic (see below) and emit the final report.
 > 2. **Validate .mcp.json files** (HIGH severity for embedded secrets). For each `.mcp.json` found:
 >
 > ```bash
-> find "/home/donbr/open-biosciences/{repo}" -name '.mcp.json' -not -path '*/.git/*'
+> find "$WORKSPACE_ROOT/{repo}" -name '.mcp.json' -not -path '*/.git/*'
 > ```
 >
 > Check that no `password`, `secret`, `token`, or `api_key` fields contain non-empty, non-placeholder values. Environment variable references like `${API_KEY}` are acceptable.
@@ -214,7 +216,7 @@ Apply the verdict logic (see below) and emit the final report.
 > 3. **Validate .gitignore files** (MEDIUM severity for missing rules). For each repo with changes:
 >
 > ```bash
-> cat "/home/donbr/open-biosciences/{repo}/.gitignore" 2>/dev/null
+> cat "$WORKSPACE_ROOT/{repo}/.gitignore" 2>/dev/null
 > ```
 >
 > Verify these entries exist:
